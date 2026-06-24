@@ -49,6 +49,16 @@ The initial cache object is whatever Hugging Face returns as `past_key_values`.
 Later engine phases can wrap that object in a richer sequence-level cache
 manager.
 
+## Request Scheduling
+
+`Request` tracks user-visible generation state: prompt, output token ids,
+sampling parameters, lifecycle status, and errors.
+
+`Scheduler` starts as a FIFO scheduler with a fixed `max_batch_size`. This is
+intentionally simple. It lets the engine study request admission and decode
+batching before adding more complex policies such as priority, preemption, or
+memory-aware scheduling.
+
 ## Learning Boundary
 
 The project should stay small enough that each system concept is visible. When a
