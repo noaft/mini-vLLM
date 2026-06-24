@@ -109,6 +109,22 @@ The first useful milestone is:
 6. Add sampling.
 7. Add request scheduling and batching.
 
+## Setup
+
+Create a virtual environment and install the project in editable mode:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+```
+
+Run tests:
+
+```bash
+python -m pytest
+```
+
 ## Expected Usage
 
 Early CLI target:
