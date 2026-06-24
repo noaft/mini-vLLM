@@ -36,6 +36,19 @@ decode_step(input_ids, kv_cache) -> logits, kv_cache
 `prefill` processes the full prompt. `decode_step` processes only the latest
 token while reusing prior keys and values.
 
+## First Model Adapter
+
+`minivllm.model.HFRunner` is the first runtime adapter. It does three small
+jobs:
+
+- load `AutoTokenizer` and `AutoModelForCausalLM`
+- normalize model output into `logits` and `kv_cache`
+- keep `model.generate()` out of the engine path
+
+The initial cache object is whatever Hugging Face returns as `past_key_values`.
+Later engine phases can wrap that object in a richer sequence-level cache
+manager.
+
 ## Learning Boundary
 
 The project should stay small enough that each system concept is visible. When a
