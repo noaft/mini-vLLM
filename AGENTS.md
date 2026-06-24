@@ -10,7 +10,7 @@ Favor small, inspectable implementations over production completeness.
 The repository should help a reader understand:
 
 - how prompts become token ids
-- how a decoder-only Transformer produces logits
+- how a Hugging Face causal LM produces logits through low-level forward calls
 - how prefill differs from decode
 - how KV cache changes decode cost
 - how request scheduling and batching work
@@ -29,13 +29,15 @@ The repository should help a reader understand:
 ## Implementation Preferences
 
 - Use Python for the first version.
-- Use PyTorch for the model implementation.
+- Use PyTorch through Hugging Face `transformers` for the model backend.
 - Use FastAPI only when the server phase starts.
-- Start with a character-level tokenizer.
-- Start with a simple contiguous KV cache before paged KV cache.
+- Start with a small Hugging Face causal LM, likely `sshleifer/tiny-gpt2`.
+- Do not call `model.generate()` in the engine path.
+- Start by wrapping Hugging Face `past_key_values` before building a custom
+  cache manager.
 - Keep interfaces stable and boring:
-  - `Tokenizer.encode()`
-  - `Tokenizer.decode()`
+  - `HFRunner.prefill()`
+  - `HFRunner.decode_step()`
   - `Engine.generate()`
   - `Scheduler.add_request()`
   - `Scheduler.step()`
@@ -55,7 +57,7 @@ Docs should be practical and concrete. Avoid marketing language.
 Early tests should focus on:
 
 - tensor shapes
-- tokenizer round trips
+- tokenizer/model wrapper behavior
 - request state transitions
 - cache growth
 - deterministic sampling paths
@@ -68,7 +70,9 @@ about inference mechanics first.
 - CUDA-specific code
 - distributed serving
 - tensor parallelism
-- complicated Hugging Face compatibility
+- calling `model.generate()` for the core engine
+- custom Transformer architecture in the main path
+- broad Hugging Face compatibility before one tiny causal LM works
 - production PagedAttention before simple KV cache exists
 - large dependencies that hide the mechanism being studied
 
@@ -81,4 +85,4 @@ If the repo only has planning files, implement Phase 0 from `PLAN.md`:
 3. Add a minimal test setup.
 4. Add `docs/01-overview.md`.
 
-After that, continue with the tokenizer phase.
+After that, continue with the Hugging Face tokenizer/model runner phase.

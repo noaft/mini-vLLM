@@ -22,49 +22,48 @@ Done when:
 
 ## Phase 1: Tokenizer
 
-Purpose: create the smallest possible text-to-token boundary.
+Purpose: load and use a real tokenizer through `transformers` while keeping the
+serving engine in this repo.
 
 Initial design:
 
-- Character-level tokenizer.
-- Fixed toy vocabulary.
-- Special tokens: `<pad>`, `<bos>`, `<eos>`, `<unk>`.
+- Use `AutoTokenizer`.
+- Start with a small causal LM such as `sshleifer/tiny-gpt2`.
+- Normalize padding/eos behavior in a small wrapper if needed.
 
 Deliverables:
 
-- `minivllm/tokenizer/simple_tokenizer.py`
-- encode/decode tests
-- short docs explaining why this is intentionally simple
+- tokenizer loading path
+- encode/decode tests using the selected model tokenizer
+- docs explaining what Hugging Face handles versus what mini-vLLM owns
 
 Done when:
 
 - Text can be encoded into token ids and decoded back into text.
 - The tokenizer interface is stable enough for the engine.
 
-## Phase 2: Tiny Decoder-Only Transformer
+## Phase 2: Hugging Face Model Runner
 
-Purpose: build a model small enough to understand but real enough to serve.
+Purpose: load a real causal language model but expose only the low-level calls
+needed by the serving engine.
 
 Initial design:
 
-- PyTorch implementation.
-- Token embedding.
-- Positional embedding or rotary position embedding later.
-- Causal self-attention.
-- MLP block.
-- LayerNorm.
-- LM head producing logits.
+- Use `AutoModelForCausalLM`.
+- Do not call `model.generate()`.
+- Call `model(input_ids=..., past_key_values=..., use_cache=True)` directly.
+- Return logits and updated `past_key_values`.
 
 Deliverables:
 
-- `minivllm/model/transformer.py`
-- config object for model size
-- shape tests
+- `minivllm/model/hf_runner.py`
+- model config/loading options
+- shape tests for logits and cache outputs
 
 Done when:
 
 - The model accepts token ids and returns logits.
-- A forward pass works for batch and sequence dimensions.
+- A forward pass exposes `past_key_values` for later decode steps.
 
 ## Phase 3: Naive Generation Loop
 
@@ -73,8 +72,8 @@ Purpose: make the system generate tokens before optimizing anything.
 Initial design:
 
 - One request at a time.
-- No KV cache.
-- Recompute the full sequence each step.
+- Use Hugging Face model calls manually.
+- Recompute the full sequence each step at first if needed.
 - Greedy decoding only.
 
 Deliverables:
@@ -114,14 +113,15 @@ Purpose: avoid recomputing attention history during decode.
 
 Initial design:
 
-- Per-layer key/value tensors.
-- Append new token states during decode.
-- Simple contiguous storage first.
+- Wrap Hugging Face `past_key_values`.
+- Keep one cache object per active sequence.
+- Make cache ownership explicit even if storage is still handled by
+  `transformers`.
 
 Deliverables:
 
 - `minivllm/engine/kv_cache.py`
-- model forward path that can read/write cache
+- model runner path that can read/write cache
 - tests for cache shape growth
 - docs explaining memory tradeoffs
 
@@ -139,7 +139,9 @@ Initial design:
 
 - Request object with prompt, sampling params, output tokens, and status.
 - Scheduler that selects active requests.
-- Simple batching for decode steps.
+- Simple batching for prefill and decode steps where feasible.
+- Keep a clear fallback path for models whose cache format makes batching
+  awkward at first.
 
 Deliverables:
 
@@ -220,7 +222,8 @@ Purpose: add optional realism after the core system is clear.
 
 Possible directions:
 
-- Load a tiny pretrained Hugging Face model.
+- Add more Hugging Face causal LM compatibility.
+- Add a tiny hand-written Transformer as a separate educational module.
 - Add streaming responses.
 - Add benchmark scripts.
 - Add memory usage instrumentation.
@@ -242,4 +245,5 @@ Implement Phase 0 package skeleton:
 - `docs/01-overview.md`
 
 Do not start with PagedAttention, CUDA kernels, or model compatibility. Those
-come after the plain engine is easy to understand.
+come after the plain engine is easy to understand. The main path should start
+with a tiny Hugging Face causal LM and manual serving logic.
