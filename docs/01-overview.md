@@ -85,6 +85,20 @@ runner. In the first implementation, the cache value is Hugging Face
 
 This keeps cache lifecycle explicit before implementing a custom or paged cache.
 
+## Naive Engine Loop
+
+`Engine.generate()` currently serves one request at a time:
+
+1. encode the prompt
+2. run `HFRunner.prefill()`
+3. store the returned KV cache
+4. sample the first token from prefill logits
+5. call `HFRunner.decode_step()` for later tokens
+6. remove the request cache when generation finishes
+
+This is not continuous batching yet. It is the smallest useful loop that proves
+the core prefill/decode/cache/sampling path.
+
 ## Learning Boundary
 
 The project should stay small enough that each system concept is visible. When a
