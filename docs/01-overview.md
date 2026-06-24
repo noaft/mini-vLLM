@@ -59,6 +59,19 @@ intentionally simple. It lets the engine study request admission and decode
 batching before adding more complex policies such as priority, preemption, or
 memory-aware scheduling.
 
+## Sampling
+
+`Sampler` owns token selection after the model returns logits. Keeping sampling
+outside the model runner makes the engine loop explicit:
+
+1. run model forward
+2. take final-token logits
+3. sample the next token
+4. append token to request state
+
+The first sampler supports greedy decoding through `temperature=0`, plus
+temperature, top-k, and top-p filtering.
+
 ## Learning Boundary
 
 The project should stay small enough that each system concept is visible. When a
