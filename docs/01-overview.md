@@ -72,6 +72,19 @@ outside the model runner makes the engine loop explicit:
 The first sampler supports greedy decoding through `temperature=0`, plus
 temperature, top-k, and top-p filtering.
 
+## KV Cache Ownership
+
+`KVCacheStore` maps each active request id to the cache returned by the model
+runner. In the first implementation, the cache value is Hugging Face
+`past_key_values`. The store adds serving-specific bookkeeping:
+
+- which request owns the cache
+- how many prompt tokens created it
+- how many decode steps have extended it
+- when the cache should be removed
+
+This keeps cache lifecycle explicit before implementing a custom or paged cache.
+
 ## Learning Boundary
 
 The project should stay small enough that each system concept is visible. When a
